@@ -1,0 +1,78 @@
+# Code Review Agent configuration.
+#
+# Priority: CLI flags > environment variables > this file > built-in defaults.
+# Copy to `code-review.toml` (auto-detected in the current directory) or pass
+# with `--config`.
+
+[llm]
+# openai | openai-compatible | deepseek | anthropic | fake
+# "fake" runs fully offline with no network calls and no cost, which is useful
+# for wiring the agent into CI before credentials exist.
+provider = "openai"
+model = "gpt-4o-mini"
+# Name of the environment variable holding the key. The key itself is never
+# written to disk or into a report.
+api_key_env = "OPENAI_API_KEY"
+temperature = 0.0
+max_output_tokens = 4096
+timeout_seconds = 90.0
+# Transport retries for failed requests (exponential backoff).
+max_retries = 3
+# Extra attempts to coerce malformed model output into schema-valid JSON.
+max_format_repairs = 2
+# json_schema (strongest) | json_object | none
+response_format = "json_object"
+
+[budget]
+# Hard ceilings. When any is reached the agent stops issuing model requests and
+# the run is reported as incomplete rather than successful.
+max_total_tokens = 200000
+max_requests = 60
+# Remove or set to 0-comment to disable the cost ceiling. Cost is only known for
+# models with a published price; otherwise the report says "unknown".
+# max_cost_usd = 2.00
+max_files = 40
+max_file_bytes = 200000
+# Character budget for a single file's prompt.
+max_context_chars = 120000
+
+[scanner]
+extensions = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
+max_files = 500
+# Following symlinks is refused when the target escapes the project.
+follow_symlinks = false
+
+[static_analysis]
+enabled = true
+# "auto" probes PATH and ./node_modules/.bin; a path or command name pins it;
+# "off" disables ESLint (built-in rules still run).
+eslint_command = "auto"
+eslint_timeout_seconds = 120.0
+# Set true to make a missing ESLint a fatal error instead of a recorded skip.
+fail_on_missing_tool = false
+# Dependency-free rules that always run, so the pipeline works without Node.
+builtin_rules = true
+max_diagnostics_per_file = 25
+
+[review]
+max_review_rounds_per_file = 2
+# Drop model findings below this self-reported confidence (0.0 keeps all).
+min_confidence = 0.0
+max_findings_per_file = 20
+include_static_diagnostics = true
+# Let the agent request read-only project tools before concluding.
+enable_tool_calls = true
+max_tool_calls_per_file = 2
+# When true, a file whose LLM review failed makes the whole run FAILED, so an
+# incomplete review is never mistaken for a clean one.
+fail_on_partial_review = true
+
+[report]
+output_dir = ".code-review"
+markdown_filename = "report.md"
+json_filename = "report.json"
+max_evidence_chars = 400
+
+[agent]
+# Log level: DEBUG | INFO | WARNING | ERROR
+log_level = "INFO"
